@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Calculate your inventory services ROI with GHX's Interactive Calculator.">
+    <title>Inventory Services ROI Calculator</title>
+    <link rel="stylesheet" href="https://www.ghx.com/invoice-and-payment-suppliers/style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            color: #343a40;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h2 {
+            text-align: center;
+        }
+        button {
+            background-color: #2A53CC;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+        }
+        button:hover {
+            background-color: #1a3e99;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #2A53CC; 
+            border: 1px solid #d4e7d4; 
+            color: white; 
+            font-weight: bold;
+            border-radius: 5px;
+            text-align: center;
+            display: inline-block;
+            width: 100%;
+        }
+        .total-savings {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e9ecef; 
+            border: 1px solid #ccc; 
+            color: black; 
+            font-weight: bold;
+            border-radius: 5px;
+            text-align: center;
+            display: none; 
+            width: 100%;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            font-size: 11pt;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 6px;
+            box-sizing: border-box;
+            text-align: right;
+            font-size: 0.9em;
+        }
+        .slider-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .slider-container label {
+            font-weight: bold;
+            font-size: 14pt;
+            color: #2A53CC;
+            text-align: center;
+            display: block;
+        }
+        .slider-container span {
+            font-weight: bold;
+            font-size: 14pt;
+            color: #2A53CC;
+            text-align: center;
+            display: block;
+            margin-top: 5px;
+        }
+        .slider {
+            width: 90%;
+        }
+
+        /* Container to hold both the checkbox and the input side by side */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Space between checkbox and input field */
+        }
+
+        /* Style the checkbox */
+        #custom-rate-toggle {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Style the input field */
+        #custom-rate {
+            width: 120px;
+            padding: 5px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>GHX Inventory Services ROI Calculator</h2>
+
+        <div class="slider-container">
+            <label for="inventory-value">Inventory Value ($):</label>
+            <span id="inventory-display">$1,000,000</span>
+            <input type="range" id="inventory-value" class="slider" min="1000000" max="12000000" step="1000" value="1000000" oninput="updateValues()">
+        </div>
+
+        <div class="result" id="result">Net Gain: $0.00 | ROI: 0.00%</div>
+
+        <div class="top-section">
+            <button onclick="calculateROI()">Calculate ROI</button>
+        </div>
+        
+        <!-- Custom Hourly Rate Section moved above Labor Costs -->
+        <div class="form-group">
+            <label>Custom Hourly Rate</label>
+            <div class="toggle-container">
+                <input type="checkbox" id="custom-rate-toggle" onchange="toggleHourlyRate()" />
+                <input type="number" id="custom-rate" placeholder="Enter Hourly Rate" disabled oninput="updateHourlyRate()"/>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="salaries">Labor Costs ($)- Staff Salaries (Average $35 per hour):</label>
+            <input type="number" id="salaries" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="technology-expenses">Technology Expenses ($) - Hardware (Laptops + Scanners) + Software costs:</label>
+            <input type="number" id="technology-expenses" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="error-correction">Error Correction Costs ($)- Hours spent recounting and correcting(Typically 50% of Labor):</label>
+            <input type="number" id="error-correction" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="data-cleansing">Data Cleansing Costs ($)- Hours spent Pre and Post Count (Typically 5-10 days):</label>
+            <input type="number" id="data-cleansing" readonly>
+        </div>
+
+        <div class="total-savings" id="total-savings">Total Savings: $0.00</div> 
+    </div>
+
+    <script>
+        let defaultHourlyRate = 35; // Default hourly rate for staff
+        let hourlyRate = defaultHourlyRate;
+
+        // This function will update costs and values as per the inventory value
+        function updateValues() {
+            const inventoryValue = document.getElementById('inventory-value').value;
+            document.getElementById('inventory-display').textContent = `$${Number(inventoryValue).toLocaleString()}`;
+            populateCosts(inventoryValue);
+        }
+
+        // This function will toggle between using custom hourly rate or default hourly rate
+        function toggleHourlyRate() {
+            const useCustomRate = document.getElementById('custom-rate-toggle').checked;
+            const salaryInput = document.getElementById('salaries');
+            const customRateInput = document.getElementById('custom-rate');
+
+            if (useCustomRate) {
+                customRateInput.disabled = false; // Enable custom rate input
+                hourlyRate = parseFloat(customRateInput.value) || defaultHourlyRate; // Use entered value or default if empty
+            } else {
+                customRateInput.disabled = true; // Disable custom rate input
+                customRateInput.value = ''; // Clear the custom rate input
+                hourlyRate = defaultHourlyRate; // Revert to default hourly rate
+            }
+            populateCosts(document.getElementById('inventory-value').value);
+        }
+
+        // Update the hourly rate when the user inputs a value
+        function updateHourlyRate() {
+            const customRate = document.getElementById('custom-rate').value;
+            hourlyRate = parseFloat(customRate) || defaultHourlyRate; // Use custom rate if valid
+            populateCosts(document.getElementById('inventory-value').value);
+        }
+
+        // This function will calculate all costs based on the inventory value and other factors
+        function populateCosts(inventoryValue) {
+            // Recalculate salaries based on hourly rate and inventory value
+            let salaries = inventoryValue * 0.007 * (hourlyRate / 35); // 0.7% of inventory value, multiplied by hourly rate
+            let techExpenses = inventoryValue * 0.0025; // 0.25% of inventory value
+            let errorCorrection = salaries * 0.5; // 50% of salaries for error correction
+            let dataCleansing = inventoryValue * 0.0012; // 0.12% of inventory value
+
+            document.getElementById('salaries').value = salaries.toFixed(2);
+            document.getElementById('technology-expenses').value = techExpenses.toFixed(2);
+            document.getElementById('error-correction').value = errorCorrection.toFixed(2);
+            document.getElementById('data-cleansing').value = dataCleansing.toFixed(2);
+        }
+
+        // Function to calculate ROI when the button is clicked
+        function calculateROI() {
+            const inventoryValue = parseFloat(document.getElementById('inventory-value').value);
+            const salaries = parseFloat(document.getElementById('salaries').value);
+            const techExpenses = parseFloat(document.getElementById('technology-expenses').value);
+            const errorCorrection = parseFloat(document.getElementById('error-correction').value);
+            const dataCleansing = parseFloat(document.getElementById('data-cleansing').value);
+
+            const totalSavings = salaries + techExpenses + errorCorrection + dataCleansing;
+            const investment = (inventoryValue / 1000) * 7; // Adjust this multiplier if needed
+            const netGain = totalSavings - investment;
+            const roi = (netGain / investment) * 100;
+
+            document.getElementById('result').textContent = `Net Gain: $${netGain.toFixed(2)} | ROI: ${roi.toFixed(2)}%`;
+            document.getElementById('total-savings').textContent = `Total Savings: $${totalSavings.toFixed(2)}`;
+            document.getElementById('total-savings').style.display = 'block';
+        }
+
+        // Initialize the values with default values
+        updateValues();
+    </script>
+</body>
+</html>
